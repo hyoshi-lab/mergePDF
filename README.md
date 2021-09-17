@@ -6,15 +6,15 @@
 
 Windowsの表示順とは違うことがあります
 
-本体
-MergePdf.py
+- 本体
+  MergePdf.py
 
-PDF表示用補助スクリプト(for Windows)
-MergePdf.vbs
+- PDF表示用補助スクリプト(for Windows)
+  MergePdf.vbs
 
-セットアップ
-MergePdfSetup.bat
+- セットアップ
+  MergePdfSetup.bat
 
-使い方
-MergePDF.docx
-MergePDF.pdf
+- 使い方
+  MergePDF.docx;
+  MergePDF.pdf;
