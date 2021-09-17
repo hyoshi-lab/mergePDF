@@ -4,7 +4,7 @@ Created on Sat Jun 19 14:06:21 2021
 
 @author: yoshi@nagaokauniv.ac.jp
 """
-version = "ver.0.91"
+version = "ver.0.92"
 
 #import PyPDF2
 import sys
@@ -20,18 +20,19 @@ from tkinter import messagebox
 from tkinter import filedialog
 from configobj import ConfigObj
 import subprocess
-#from natsort import natsorted
+from natsort import natsorted
 
 #global val
-inputPath = os.path.abspath(os.path.dirname(__file__))
-outputPath = os.path.abspath(os.path.dirname(__file__))
-outputFileName = ''
-headerText = ''
-pageNumber = False
-headerX = 0
-headerY = 10
-fontSize = 8
+inputPath = os.path.abspath(os.path.dirname(__file__))      # 入力フォルダ
+outputPath = os.path.abspath(os.path.dirname(__file__))     # 出力フォルダ
+outputFileName = ''     # 出力ファイル名
+headerText = ''         # ヘッダ文字列
+pageNumber = False      # ページ番号付加
+headerX = 0             # ヘッダ位置X
+headerY = 10            # ヘッダ位置Y
+fontSize = 8            # ヘッダフォントサイズ
 
+# 設定ファイルMergePdf.iniの読み込み
 def readConfigFile():
     global inputPath
     global outputPath
@@ -51,6 +52,7 @@ def readConfigFile():
         headerY = config['headerY']
         fontSize = config['fontSize']
     
+# 設定ファイル保存
 def writeConfigFile():
     config = ConfigObj("MergePdf.ini", encoding='utf-8')
     config['inputPath'] = inputPath
@@ -63,6 +65,7 @@ def writeConfigFile():
     config['fontSize'] = fontSize
     config.write()
 
+# 入力ファル一覧リスト更新
 def UpdateListBox():
     listbox.delete(0, END)
     if inputPath:
@@ -71,6 +74,7 @@ def UpdateListBox():
         for file in pdf_files:
             listbox.insert(END, os.path.basename(file))
 
+# ダイアログ更新
 def UpdateDialog():
     # フォルダ内のPDFファイル一覧
     global inputPath
@@ -89,7 +93,7 @@ def UpdateDialog():
     fontSize = eFontSize.get()
     UpdateListBox()
 
-# フォルダ指定の関数
+# 入力フォルダ指定の関数
 def input_dirdialog_clicked():
     global inputPath
     inputPath = eInputPath.get()
@@ -105,7 +109,7 @@ def input_dirdialog_clicked():
         eInputPath.set(inputPath)
         UpdateListBox()
 
-# ファイル指定の関数
+# 出力先フォルダ指定の関数
 def output_dirdialog_clicked():
     global outputPath
     outputPath = eOutputPath.get()
@@ -194,6 +198,7 @@ if __name__ == "__main__":
     eOutputPath.set(outputPath)
     IEntry = ttk.Entry(frame2, textvariable=eOutputPath, width=60)
     IEntry.pack(side=LEFT)
+    
     # 「ファイル参照」ボタンの作成
     IButton = ttk.Button(frame2, text="参照", command=output_dirdialog_clicked)
     IButton.pack(side=LEFT)
