@@ -10,7 +10,7 @@ Windowsの表示順とは違うことがあります
   - MergePdf.py
 - PDF表示用補助スクリプト(for Windows)
   - MergePdf.vbs
-- セットアップ
+- セットアップ(for Windows)
   - MergePdfSetup.bat
 - 使い方
   - MergePDF.docx
