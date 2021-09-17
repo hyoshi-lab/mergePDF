@@ -7,7 +7,7 @@
 Windowsの表示順とは違うことがあります
 
 - 本体
-  MergePdf.py
+    MergePdf.py
 
 - PDF表示用補助スクリプト(for Windows)
   MergePdf.vbs
