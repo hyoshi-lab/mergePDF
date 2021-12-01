@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
-"""
+'''
 Created on Sat Jun 19 14:06:21 2021
 
 @author: yoshi@nagaokauniv.ac.jp
-"""
-version = "ver.0.92"
+'''
+version = 'ver.0.94'
+#ver.0.94   20211130    コニカミノルタ複合機　ページ位置対応
 
-#import PyPDF2
 import sys
 import os
 import glob
@@ -23,16 +23,15 @@ import subprocess
 from natsort import natsorted
 
 #global val
-inputPath = os.path.abspath(os.path.dirname(__file__))      # 入力フォルダ
-outputPath = os.path.abspath(os.path.dirname(__file__))     # 出力フォルダ
-outputFileName = ''     # 出力ファイル名
-headerText = ''         # ヘッダ文字列
-pageNumber = False      # ページ番号付加
-headerX = 0             # ヘッダ位置X
-headerY = 10            # ヘッダ位置Y
-fontSize = 8            # ヘッダフォントサイズ
+inputPath = os.path.abspath(os.path.dirname(__file__))
+outputPath = os.path.abspath(os.path.dirname(__file__))
+outputFileName = ''
+headerText = ''
+pageNumber = False
+headerX = 0
+headerY = 10
+fontSize = 8
 
-# 設定ファイルMergePdf.iniの読み込み
 def readConfigFile():
     global inputPath
     global outputPath
@@ -42,7 +41,7 @@ def readConfigFile():
     global headerY
     global fontSize
 
-    config = ConfigObj("MergePdf.ini", encoding='utf-8')
+    config = ConfigObj('MergePdf.ini', encoding='utf-8')
     if config:
         inputPath = config['inputPath']
         outputPath = config['outputPath']
@@ -52,9 +51,8 @@ def readConfigFile():
         headerY = config['headerY']
         fontSize = config['fontSize']
     
-# 設定ファイル保存
 def writeConfigFile():
-    config = ConfigObj("MergePdf.ini", encoding='utf-8')
+    config = ConfigObj('MergePdf.ini', encoding='utf-8')
     config['inputPath'] = inputPath
     config['outputPath'] = outputPath
     config['outputFileName'] = outputFileName
@@ -65,16 +63,21 @@ def writeConfigFile():
     config['fontSize'] = fontSize
     config.write()
 
-# 入力ファル一覧リスト更新
+# ページ表示位置修正用座標計算
+def adjustPoint(p, hPage, hImage):
+    r = hImage / hPage
+    x = float(p[0]) * r
+    y = float(p[1]) * r + hPage - hImage
+    return (x, y)
+
 def UpdateListBox():
     listbox.delete(0, END)
     if inputPath:
-        pdf_files = natsorted(glob.glob(inputPath + "/*.pdf"))
+        pdf_files = natsorted(glob.glob(inputPath + '/*.pdf'))
         listbox.delete(0, END)
         for file in pdf_files:
             listbox.insert(END, os.path.basename(file))
 
-# ダイアログ更新
 def UpdateDialog():
     # フォルダ内のPDFファイル一覧
     global inputPath
@@ -93,7 +96,7 @@ def UpdateDialog():
     fontSize = eFontSize.get()
     UpdateListBox()
 
-# 入力フォルダ指定の関数
+# フォルダ指定の関数
 def input_dirdialog_clicked():
     global inputPath
     inputPath = eInputPath.get()
@@ -102,14 +105,14 @@ def input_dirdialog_clicked():
     else:
         iDir = os.path.abspath(os.path.dirname(__file__))
 
-    fTyp = [("PDFファイル", "*.pdf")]
+    fTyp = [('PDFファイル', '*.pdf')]
     iDirPath = filedialog.askopenfilename(filetype = fTyp, initialdir = iDir)
     if iDirPath:
         inputPath = os.path.abspath(os.path.dirname(iDirPath))
         eInputPath.set(inputPath)
         UpdateListBox()
 
-# 出力先フォルダ指定の関数
+# ファイル指定の関数
 def output_dirdialog_clicked():
     global outputPath
     outputPath = eOutputPath.get()
@@ -117,7 +120,6 @@ def output_dirdialog_clicked():
         iFile = outputPath    
     else:
         iFile = os.path.abspath(os.path.dirname(__file__))
-
     iFilePath = filedialog.askdirectory(initialdir = iFile)
     if iFilePath:
         outputPath = os.path.abspath(iFilePath)
@@ -130,83 +132,93 @@ def conductMain():
     UpdateDialog()
 
     if inputPath is None:
-        messagebox.showerror("error", "フォルダの指定がありません。")
+        messagebox.showerror('error', 'フォルダの指定がありません。')
         return 0
 
-#    documents_path = os.getenv("HOMEDRIVE") + os.getenv("HOMEPATH") + "\\My Documents"
+#    documents_path = os.getenv('HOMEDRIVE') + os.getenv('HOMEPATH') + '\\My Documents'
     # フォルダ内のPDFファイル一覧
-    pdf_files = natsorted(glob.glob(inputPath + "/*.pdf"))
+    pdf_files = natsorted(glob.glob(inputPath + '/*.pdf'))
     if 0 == len(pdf_files):
-        messagebox.showerror("error", "PDFファイルが見つかりません")
+        messagebox.showerror('error', 'PDFファイルが見つかりません')
         return 0
 
     # １つのPDFファイルにまとめる
     pdf_writer = fitz.open()
+    page_info = []
     for file in pdf_files:
         pdf_reader = fitz.open(str(file))
         pdf_writer.insertPDF(pdf_reader)
-
-    # ページ数を取得する例
-    #   _pages = fitz.open(pdf_path).pageCount
+        # 座標系修正のためページごとにのmetadata，画像情報記録
+        for n in range(0, pdf_reader.page_count):
+            pInfo = []
+            page = pdf_reader[n]
+            pInfo.append(pdf_reader.metadata)
+            for j, img in enumerate(page.getImageList()):
+                pInfo.append(pdf_reader.extractImage(img[0]))
+            page_info.append(pInfo)
 
     # 保存ファイル名（先頭と末尾のファイル名で作成）
     now = datetime.datetime.now()
-    outputFileName = outputPath + '\\' + Path(pdf_files[0]).stem + "-" + now.strftime('%Y%m%d_%H%M%S') + ".pdf"
+    outputFileName = outputPath + '\\' + Path(pdf_files[0]).stem + '-' + now.strftime('%Y%m%d_%H%M%S') + '.pdf'
 
-    #ページ番号
+   #ページ番号
     if pageNumber or 0 < len(headerText):
         pageCount = pdf_writer.page_count 
         for num in range(0, pdf_writer.page_count):
             page = pdf_writer[num]
+            pInfo = page_info[num]   # metadata，画像情報
             text = headerText + ' [{:3}/{:3}]'.format(num + 1, pageCount)
             tw = fitz.TextWriter(page.rect)
-            tw.append((headerX, headerY), text, fontsize = float(fontSize))
+            if(1 < len(pInfo) and pInfo[0]['format'] == 'PDF 1.3'): # コニカミノルタ複合機ページ位置補正用
+                hImage = pInfo[1]['height']
+                hPage = page.rect.y1
+                tw.append(adjustPoint((headerX, headerY), hPage, hImage), text, fontsize = float(fontSize) * hImage / hPage)
+            else:
+                tw.append((headerX, headerY), text, fontsize = float(fontSize))
             tw.write_text(page)
-           
     # 保存
     pdf_writer.save(outputFileName)
     writeConfigFile()
-    subprocess.run("start " + outputFileName, shell=True, stdout=subprocess.PIPE , stderr=subprocess.STDOUT)
+    subprocess.Popen(['start', '', outputFileName], shell=True)
     
-if __name__ == "__main__":
+if __name__ == '__main__':
     readConfigFile()
     
     # rootの作成
     root = Tk()
-    root.title("PDFファイル結合" + ' ' + version)
+    root.title('PDFファイル結合' + ' ' + version)
 
     # 参照フォルダ
     frame1 = ttk.Frame(root, padding=10)
 #    frame1.grid(row=0, column=1, sticky=W)
     frame1.pack()
-    ILabel = ttk.Label(frame1, text="参照フォルダ:")
+    ILabel = ttk.Label(frame1, text='参照フォルダ:')
     ILabel.pack(side=LEFT)
     eInputPath = StringVar()
     eInputPath.set(inputPath)
     IEntry = ttk.Entry(frame1, textvariable=eInputPath, width=60)
     IEntry.pack(side=LEFT)
     # 「ファイル参照」ボタンの作成
-    IButton = ttk.Button(frame1, text="参照", command=input_dirdialog_clicked)
+    IButton = ttk.Button(frame1, text='参照', command=input_dirdialog_clicked)
     IButton.pack(side=LEFT)
 
     # 出力ファイル
     frame2 = ttk.Frame(root)
     frame2.pack()
-    ILabel = ttk.Label(frame2, text="出力フォルダ:", padding=(0, 0))
+    ILabel = ttk.Label(frame2, text='出力フォルダ:', padding=(0, 0))
     ILabel.pack(side=LEFT)
     eOutputPath = StringVar()
     eOutputPath.set(outputPath)
     IEntry = ttk.Entry(frame2, textvariable=eOutputPath, width=60)
     IEntry.pack(side=LEFT)
-    
     # 「ファイル参照」ボタンの作成
-    IButton = ttk.Button(frame2, text="参照", command=output_dirdialog_clicked)
+    IButton = ttk.Button(frame2, text='参照', command=output_dirdialog_clicked)
     IButton.pack(side=LEFT)
 
     # ヘッダ文字列
     frame3 = ttk.Frame(root, padding=10)
     frame3.pack()
-    ILabel = ttk.Label(frame3, text="ヘッダ文字列:", padding=(5, 2))
+    ILabel = ttk.Label(frame3, text='ヘッダ文字列:', padding=(5, 2))
     ILabel.pack(side=LEFT)
     eHeaderText = StringVar()
     eHeaderText.set(headerText)
@@ -220,19 +232,19 @@ if __name__ == "__main__":
     chk = ttk.Checkbutton(frame4, variable=bPageNumber, text='ページ番号を付ける')
     chk.pack(side=LEFT)
 
-    ILabel = ttk.Label(frame4, text="横位置:", padding=(5, 2))
+    ILabel = ttk.Label(frame4, text='横位置:', padding=(5, 2))
     ILabel.pack(side=LEFT)
     eHeaderX = StringVar()
     eHeaderX.set(headerX)
     IEntry = ttk.Entry(frame4, textvariable=eHeaderX, width=6)
     IEntry.pack(side=LEFT)
-    ILabel = ttk.Label(frame4, text="縦位置:", padding=(5, 2))
+    ILabel = ttk.Label(frame4, text='縦位置:', padding=(5, 2))
     ILabel.pack(side=LEFT)
     eHeaderY = StringVar()
     eHeaderY.set(headerY)
     IEntry = ttk.Entry(frame4, textvariable=eHeaderY, width=6)
     IEntry.pack(side=LEFT)
-    ILabel = ttk.Label(frame4, text="フォントサイズ:", padding=(5, 2))
+    ILabel = ttk.Label(frame4, text='フォントサイズ:', padding=(5, 2))
     ILabel.pack(side=LEFT)
     eFontSize = StringVar()
     eFontSize.set(fontSize)
@@ -249,12 +261,11 @@ if __name__ == "__main__":
   # ボタンの設置
     frame9 = ttk.Frame(root, padding=10)
     frame9.pack()
-    button1 = ttk.Button(frame9, text="実行", command=conductMain)
-    button1.pack(fill = "x", padx=30, side = "left")
-    button2 = ttk.Button(frame9, text=("閉じる"), command=quit)
-    button2.pack(fill = "x", padx=30, side = "left")
+    button1 = ttk.Button(frame9, text='実行', command=conductMain)
+    button1.pack(fill = 'x', padx=30, side = 'left')
+    button2 = ttk.Button(frame9, text=('閉じる'), command=quit)
+    button2.pack(fill = 'x', padx=30, side = 'left')
 
     UpdateDialog()
 
     root.mainloop()
-
