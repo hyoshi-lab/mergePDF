@@ -5,7 +5,7 @@ Created on Sat Jun 19 14:06:21 2021
 @author: yoshi@nagaokauniv.ac.jp
 '''
 version = 'ver.0.94'
-#ver.0.94   20211130    コニカミノルタ複合機　ページ位置対応
+#ver.0.94   20211209    コニカミノルタ複合機　ページ位置対応
 
 import sys
 import os
@@ -31,6 +31,7 @@ pageNumber = False
 headerX = 0
 headerY = 10
 fontSize = 8
+option_1 = 0     # コニカミノルタ複合機
 
 def readConfigFile():
     global inputPath
@@ -40,6 +41,7 @@ def readConfigFile():
     global headerX
     global headerY
     global fontSize
+    global option_1
 
     config = ConfigObj('MergePdf.ini', encoding='utf-8')
     if config:
@@ -50,6 +52,8 @@ def readConfigFile():
         headerX = config['headerX']
         headerY = config['headerY']
         fontSize = config['fontSize']
+        if 'option_1' in config:
+            option_1 = config['option_1']
     
 def writeConfigFile():
     config = ConfigObj('MergePdf.ini', encoding='utf-8')
@@ -61,6 +65,7 @@ def writeConfigFile():
     config['headerX'] = headerX
     config['headerY'] = headerY
     config['fontSize'] = fontSize
+    config['option_1'] = option_1
     config.write()
 
 # ページ表示位置修正用座標計算
@@ -87,6 +92,7 @@ def UpdateDialog():
     global headerX
     global headerY
     global fontSize
+    global option_1
     inputPath = eInputPath.get()
     outputPath = eOutputPath.get()
     headerText = eHeaderText.get()
@@ -94,6 +100,7 @@ def UpdateDialog():
     headerX = eHeaderX.get()
     headerY = eHeaderY.get()
     fontSize = eFontSize.get()
+    option_1 = bOption_1.get()
     UpdateListBox()
 
 # フォルダ指定の関数
@@ -144,20 +151,11 @@ def conductMain():
 
     # １つのPDFファイルにまとめる
     pdf_writer = fitz.open()
-    page_info = []
     for file in pdf_files:
         pdf_reader = fitz.open(str(file))
         pdf_writer.insertPDF(pdf_reader)
-        # 座標系修正のためページごとにのmetadata，画像情報記録
-        for n in range(0, pdf_reader.page_count):
-            pInfo = []
-            page = pdf_reader[n]
-            pInfo.append(pdf_reader.metadata)
-            for j, img in enumerate(page.getImageList()):
-                pInfo.append(pdf_reader.extractImage(img[0]))
-            page_info.append(pInfo)
 
-    # 保存ファイル名（先頭と末尾のファイル名で作成）
+    # 保存ファイル名（先頭ファイル名日付時刻）
     now = datetime.datetime.now()
     outputFileName = outputPath + '\\' + Path(pdf_files[0]).stem + '-' + now.strftime('%Y%m%d_%H%M%S') + '.pdf'
 
@@ -166,11 +164,16 @@ def conductMain():
         pageCount = pdf_writer.page_count 
         for num in range(0, pdf_writer.page_count):
             page = pdf_writer[num]
-            pInfo = page_info[num]   # metadata，画像情報
-            text = headerText + ' [{:3}/{:3}]'.format(num + 1, pageCount)
+            text = headerText
+            if pageNumber :
+                text += ' [{:3}/{:3}]'.format(num + 1, pageCount)
             tw = fitz.TextWriter(page.rect)
-            if(1 < len(pInfo) and pInfo[0]['format'] == 'PDF 1.3'): # コニカミノルタ複合機ページ位置補正用
-                hImage = pInfo[1]['height']
+            # 画像ページ位置補正用
+            imgList = page.getImageList()
+            if option_1 and (0 < len(imgList)):
+                for j, img in enumerate(page.getImageList()):
+                    imgInfo = pdf_writer.extractImage(img[0])
+                hImage = imgInfo['height']
                 hPage = page.rect.y1
                 tw.append(adjustPoint((headerX, headerY), hPage, hImage), text, fontsize = float(fontSize) * hImage / hPage)
             else:
@@ -251,19 +254,26 @@ if __name__ == '__main__':
     IEntry = ttk.Entry(frame4, textvariable=eFontSize, width=6)
     IEntry.pack(side=LEFT)
 
-    #リストボックスの作成
-    frame5 = ttk.Frame(root, padding=10)
+    frame5 = ttk.Frame(root, padding=0)
     frame5.pack()
+    bOption_1 = BooleanVar()
+    bOption_1.set(option_1)
+    chk = ttk.Checkbutton(frame5, variable=bOption_1, text='位置補正_1')
+    chk.pack(side=LEFT)
+
+    #リストボックスの作成
+    frame8 = ttk.Frame(root, padding=10)
+    frame8.pack()
     list_value=tk.StringVar()
-    listbox=tk.Listbox(frame5,height=20,width=64,listvariable=list_value)
+    listbox=tk.Listbox(frame8,height=20,width=80,listvariable=list_value)
     listbox.pack()
 
   # ボタンの設置
-    frame9 = ttk.Frame(root, padding=10)
-    frame9.pack()
-    button1 = ttk.Button(frame9, text='実行', command=conductMain)
+    frame10 = ttk.Frame(root, padding=10)
+    frame10.pack()
+    button1 = ttk.Button(frame10, text='実行', command=conductMain)
     button1.pack(fill = 'x', padx=30, side = 'left')
-    button2 = ttk.Button(frame9, text=('閉じる'), command=quit)
+    button2 = ttk.Button(frame10, text=('閉じる'), command=quit)
     button2.pack(fill = 'x', padx=30, side = 'left')
 
     UpdateDialog()
