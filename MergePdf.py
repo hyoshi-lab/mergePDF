@@ -4,8 +4,9 @@ Created on Sat Jun 19 14:06:21 2021
 
 @author: yoshi@nagaokauniv.ac.jp
 '''
-version = 'ver.0.95'
-#ver.0.94   20211210    ページ位置オプション_1 座標，倍率修正
+version = 'ver.0.96'
+#ver.0.97   20211222       page.clean_contents()
+
 
 import sys
 import os
@@ -31,7 +32,7 @@ pageNumber = False
 headerX = 0
 headerY = 10
 fontSize = 8
-option_1 = 0     # ページ番号位置補正
+option_1 = 0     # 予備フラグ
 
 def readConfigFile():
     global inputPath
@@ -164,20 +165,12 @@ def conductMain():
         pageCount = pdf_writer.page_count 
         for num in range(0, pdf_writer.page_count):
             page = pdf_writer[num]
+            page.clean_contents()
             text = headerText
             if pageNumber :
                 text += ' [{:3}/{:3}]'.format(num + 1, pageCount)
             tw = fitz.TextWriter(page.rect)
-            # 座標，倍率修正
-            imgList = page.getImageList()
-            if option_1 and (0 < len(imgList)): # ページ番号位置補正
-                for j, img in enumerate(page.getImageList()):
-                    imgInfo = pdf_writer.extractImage(img[0])
-                hImage = imgInfo['height']
-                hPage = page.rect.y1
-                tw.append(adjustPoint((headerX, headerY), hPage, hImage), text, fontsize = float(fontSize) * hImage / hPage)
-            else:
-                tw.append((headerX, headerY), text, fontsize = float(fontSize))
+            tw.append((headerX, headerY), text, fontsize = float(fontSize))
             tw.write_text(page)
     # 保存
     pdf_writer.save(outputFileName)
@@ -258,8 +251,8 @@ if __name__ == '__main__':
     frame5.pack()
     bOption_1 = BooleanVar()
     bOption_1.set(option_1)
-    chk = ttk.Checkbutton(frame5, variable=bOption_1, text='位置補正')
-    chk.pack(side=LEFT)
+    chk = ttk.Checkbutton(frame5, variable=bOption_1, text='予備フラグ')
+    #chk.pack(side=LEFT)
 
     #リストボックスの作成
     frame8 = ttk.Frame(root, padding=10)
