@@ -4,7 +4,7 @@ Created on Sat Jun 19 14:06:21 2021
 
 @author: yoshi@nagaokauniv.ac.jp
 '''
-version = 'ver.0.96'
+version = 'ver.0.97'
 #ver.0.97   20211222       page.clean_contents()
 
 
